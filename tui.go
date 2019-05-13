@@ -69,9 +69,7 @@ func CursorPosition(fd int) (x int, y int, err error) {
 	}
 
 	// prints 6n to stderr
-	buf := ansi.NewOutputBuffer()
-	buf.CursorPosition()
-	buf.Flush()
+	ansi.NewWriter(nil).CursorPosition()
 
 	//@todo: probably read char-by-char.
 	// a random, blocking, 13-byte buffer is odd

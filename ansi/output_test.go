@@ -1,6 +1,7 @@
 package ansi
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"testing"
@@ -8,84 +9,82 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sinkbuf() (*bytes.Buffer, *OutputBuffer) {
+func writer() (*bytes.Buffer, *Writer) {
 	var buf bytes.Buffer
-	op := NewOutputBufferSink(&buf)
-	return &buf, op
+	w := NewWriter(&buf)
+	return &buf, w
 }
 
-func TestOutputBufferCreation(t *testing.T) {
-	op := NewOutputBuffer()
-	assert.NotNil(t, op)
+func TestWriterCreateNil(t *testing.T) {
+	w := NewWriter(nil)
+	assert.NotNil(t, w)
 }
 
-func TestOutputBufferSinkCreation(t *testing.T) {
+func TestWriterWithOutput(t *testing.T) {
 	var buf bytes.Buffer
-	op := NewOutputBufferSink(&buf)
-	assert.NotNil(t, op)
+	w := NewWriter(&buf)
+	assert.NotNil(t, w)
 }
 
 func TestOperations(t *testing.T) {
-	buf, op := sinkbuf()
+	out, w := writer()
 	tests := map[string]struct {
 		f    func()
 		want string
 	}{
-		"Origin":               {f: op.Origin, want: "\x1b[H"},
-		"ClearLineRight":       {f: op.ClearLineRight, want: "\x1b[K"},
-		"ClearLineLeft":        {f: op.ClearLineLeft, want: "\x1b[1K"},
-		"ClearLine":            {f: op.ClearLine, want: "\x1b[2K"},
-		"ClearDown":            {f: op.ClearDown, want: "\x1b[J"},
-		"ClearUp":              {f: op.ClearUp, want: "\x1b[1J"},
-		"ClearAll":             {f: op.ClearAll, want: "\x1b[2J"},
-		"CursorHide":           {f: op.CursorHide, want: "\x1b[?25l"},
-		"CursorShow":           {f: op.CursorShow, want: "\x1b[?25h"},
-		"CursorSave":           {f: op.CursorSave, want: "\x1b[s"},
-		"CursorRestore":        {f: op.CursorRestore, want: "\x1b[u"},
-		"CursorPosition":       {f: op.CursorPosition, want: "\x1b[6n"},
-		"CursorBlinker":        {f: op.CursorBlinker, want: "\x1b[0 q"},
-		"CursorSteady":         {f: op.CursorSteady, want: "\x1b[2 q"},
-		"CursorUnderlineBlink": {f: op.CursorUnderlineBlink, want: "\x1b[3 q"},
-		"CursorUnderline":      {f: op.CursorUnderline, want: "\x1b[4 q"},
-		"CursorIBlink":         {f: op.CursorIBlink, want: "\x1b[5 q"},
-		"CursorI":              {f: op.CursorI, want: "\x1b[6 q"},
+		"Origin":               {f: w.Origin, want: "\x1b[H"},
+		"ClearLineRight":       {f: w.ClearLineRight, want: "\x1b[K"},
+		"ClearLineLeft":        {f: w.ClearLineLeft, want: "\x1b[1K"},
+		"ClearLine":            {f: w.ClearLine, want: "\x1b[2K"},
+		"ClearDown":            {f: w.ClearDown, want: "\x1b[J"},
+		"ClearUp":              {f: w.ClearUp, want: "\x1b[1J"},
+		"ClearAll":             {f: w.ClearAll, want: "\x1b[2J"},
+		"CursorHide":           {f: w.CursorHide, want: "\x1b[?25l"},
+		"CursorShow":           {f: w.CursorShow, want: "\x1b[?25h"},
+		"CursorSave":           {f: w.CursorSave, want: "\x1b[s"},
+		"CursorRestore":        {f: w.CursorRestore, want: "\x1b[u"},
+		"CursorPosition":       {f: w.CursorPosition, want: "\x1b[6n"},
+		"CursorBlinker":        {f: w.CursorBlinker, want: "\x1b[0 q"},
+		"CursorSteady":         {f: w.CursorSteady, want: "\x1b[2 q"},
+		"CursorUnderlineBlink": {f: w.CursorUnderlineBlink, want: "\x1b[3 q"},
+		"CursorUnderline":      {f: w.CursorUnderline, want: "\x1b[4 q"},
+		"CursorIBlink":         {f: w.CursorIBlink, want: "\x1b[5 q"},
+		"CursorI":              {f: w.CursorI, want: "\x1b[6 q"},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			buf.Reset()
+			out.Reset()
 			tc.f()
-			op.Flush()
-			assert.Equal(t, tc.want, buf.String())
+			assert.Equal(t, tc.want, out.String())
 		})
 	}
 }
 
 func TestMovement(t *testing.T) {
-	buf, op := sinkbuf()
+	out, w := writer()
 	tests := map[string]struct {
 		f    func(int)
 		n    int
 		want string
 	}{
-		"Up":    {f: op.Up, n: 4, want: "\x1b[4A"},
-		"Down":  {f: op.Down, n: 3, want: "\x1b[3B"},
-		"Left":  {f: op.Left, n: 100, want: "\x1b[100D"},
-		"Right": {f: op.Right, n: 20, want: "\x1b[20C"},
+		"Up":    {f: w.Up, n: 4, want: "\x1b[4A"},
+		"Down":  {f: w.Down, n: 3, want: "\x1b[3B"},
+		"Left":  {f: w.Left, n: 100, want: "\x1b[100D"},
+		"Right": {f: w.Right, n: 20, want: "\x1b[20C"},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			buf.Reset()
+			out.Reset()
 			tc.f(tc.n)
-			op.Flush()
-			assert.Equal(t, tc.want, buf.String())
+			assert.Equal(t, tc.want, out.String())
 		})
 	}
 }
 
 func TestMoveTo(t *testing.T) {
-	buf, op := sinkbuf()
+	out, w := writer()
 
 	tests := []struct {
 		x    int
@@ -101,17 +100,16 @@ func TestMoveTo(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(fmt.Sprintf("%d,%d", tc.x, tc.y), func(t *testing.T) {
-			buf.Reset()
-			op.MoveTo(tc.x, tc.y)
-			op.Flush()
-			assert.Equal(t, tc.want, buf.String())
+			out.Reset()
+			w.MoveTo(tc.x, tc.y)
+			assert.Equal(t, tc.want, out.String())
 		})
 	}
 
 }
 
 func TestColumn(t *testing.T) {
-	buf, op := sinkbuf()
+	out, w := writer()
 
 	tests := []struct {
 		n    int
@@ -125,35 +123,40 @@ func TestColumn(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(fmt.Sprintf("%d", tc.n), func(t *testing.T) {
-			buf.Reset()
-			op.Column(tc.n)
-			op.Flush()
-			assert.Equal(t, tc.want, buf.String())
+			out.Reset()
+			w.Column(tc.n)
+			assert.Equal(t, tc.want, out.String())
 		})
 	}
 
 }
 
-func TestBufferMultiple(t *testing.T) {
-	buf, op := sinkbuf()
+func TestBuffered(t *testing.T) {
+	var out bytes.Buffer // stand-in for stdout or err
 
-	op.ClearAll()
-	assert.Empty(t, buf.String())
+	buf := bufio.NewWriterSize(&out, 8192)
+	w := NewWriter(buf)
 
-	op.Origin()
-	assert.Empty(t, buf.String())
+	w.ClearAll()
+	assert.Empty(t, out.String())
+	assert.True(t, buf.Buffered() > 0)
+	n := buf.Buffered()
 
-	op.CursorIBlink()
-	assert.Empty(t, buf.String())
+	w.Origin()
+	assert.Empty(t, out.String())
+	assert.True(t, buf.Buffered() > n)
+	n = buf.Buffered()
 
-	buf.Reset() // clear just in case
+	w.CursorIBlink()
+	assert.Empty(t, out.String())
+	assert.True(t, buf.Buffered() > n)
 
-	op.Flush()
-	assert.Equal(t, "\x1b[2J\x1b[H\x1b[5 q", buf.String())
+	buf.Flush()
+	assert.Equal(t, "\x1b[2J\x1b[H\x1b[5 q", out.String())
 }
 
 func TestMouseEnable(t *testing.T) {
-	buf, op := sinkbuf()
+	out, w := writer()
 
 	tests := []struct {
 		name string
@@ -167,16 +170,15 @@ func TestMouseEnable(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			buf.Reset()
-			op.MouseEnable(tc.mode)
-			op.Flush()
-			assert.Equal(t, tc.want, buf.String())
+			out.Reset()
+			w.MouseEnable(tc.mode)
+			assert.Equal(t, tc.want, out.String())
 		})
 	}
 }
 
 func TestMouseDisable(t *testing.T) {
-	buf, op := sinkbuf()
+	out, w := writer()
 
 	tests := []struct {
 		name string
@@ -190,59 +192,51 @@ func TestMouseDisable(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			buf.Reset()
-			op.MouseDisable(tc.mode)
-			op.Flush()
-			assert.Equal(t, tc.want, buf.String())
+			out.Reset()
+			w.MouseDisable(tc.mode)
+			assert.Equal(t, tc.want, out.String())
 		})
 	}
 }
 
 func TestScreenModeAlt(t *testing.T) {
-	buf, op := sinkbuf()
-	op.Screen(Alt)
-	op.Flush()
-	assert.Equal(t, "\x1b[?1049h", buf.String())
+	out, w := writer()
+	w.Screen(Alt)
+	assert.Equal(t, "\x1b[?1049h", out.String())
 }
 
 func TestScreenModeNormal(t *testing.T) {
-	buf, op := sinkbuf()
-	op.Screen(Normal)
-	op.Flush()
-	assert.Equal(t, "\x1b[?1049l", buf.String())
+	out, w := writer()
+	w.Screen(Normal)
+	assert.Equal(t, "\x1b[?1049l", out.String())
 }
 
 func TestBufStyle(t *testing.T) {
-	buf, op := sinkbuf()
-	op.Style(Underline)
-	op.Flush()
-	assert.Equal(t, "\x1b[4m", buf.String())
+	out, w := writer()
+	w.Style(Underline)
+	assert.Equal(t, "\x1b[4m", out.String())
 }
 
 func TestBufStyleMultiple(t *testing.T) {
-	buf, op := sinkbuf()
-	op.Style(Underline, Blink)
-	op.Flush()
-	assert.Equal(t, "\x1b[4;5m", buf.String())
+	out, w := writer()
+	w.Style(Underline, Blink)
+	assert.Equal(t, "\x1b[4;5m", out.String())
 }
 
 func TestBufColorBasic(t *testing.T) {
-	buf, op := sinkbuf()
-	op.Color(Red)
-	op.Flush()
-	assert.Equal(t, "\x1b[31m", buf.String())
+	out, w := writer()
+	w.Color(Red)
+	assert.Equal(t, "\x1b[31m", out.String())
 }
 
 func TestBufColor8Bit(t *testing.T) {
-	buf, op := sinkbuf()
-	op.Color(EBColor(212))
-	op.Flush()
-	assert.Equal(t, "\x1b[38;5;212m", buf.String())
+	out, w := writer()
+	w.Color(EBColor(212))
+	assert.Equal(t, "\x1b[38;5;212m", out.String())
 }
 
 func TestBufColor24Bit(t *testing.T) {
-	buf, op := sinkbuf()
-	op.Color(T(38, 50, 127))
-	op.Flush()
-	assert.Equal(t, "\x1b[38;2;38;50;127m", buf.String())
+	out, w := writer()
+	w.Color(T(38, 50, 127))
+	assert.Equal(t, "\x1b[38;2;38;50;127m", out.String())
 }

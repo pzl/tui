@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	buf := ansi.NewOutputBuffer()
+	buf := ansi.NewWriter(nil)
 	w, h := tui.TermSize(0)
 
 	msg := "Welcome"
@@ -31,7 +31,6 @@ func main() {
 		buf.MouseDisable(motion)
 		buf.Screen(ansi.Normal)
 		buf.CursorShow()
-		buf.Flush()
 	}()
 
 	buf.Screen(ansi.Alt)
@@ -39,7 +38,6 @@ func main() {
 	buf.CursorHide()
 	buf.MouseEnable(motion)
 	buf.Style(ansi.Underline)
-	buf.Flush()
 
 	fmt.Printf(string(ansi.Underline) + msg + ansi.Style(ansi.Reset))
 
@@ -56,7 +54,6 @@ func main() {
 	for ev := range events {
 		buf.Origin()
 		buf.ClearLineRight()
-		buf.Flush()
 
 		i++
 		switch ev.Type {
@@ -70,7 +67,6 @@ func main() {
 		case tui.EventInvalid:
 			fmt.Printf("%06d invalid ev %v", i, ev.M)
 		case tui.Mouse:
-			buf.Down(1)
 			fmt.Printf("%06d Mouse %v", i, ev.M)
 		}
 	}

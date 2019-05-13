@@ -1,10 +1,36 @@
 package ansi_test
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 
 	"github.com/pzl/tui/ansi"
 )
+
+func ExampleWriter() {
+	w := ansi.NewWriter(os.Stdout)
+
+	w.Screen(ansi.Alt)
+	w.ClearAll()
+	w.MoveTo(10, 10)
+	fmt.Print("example!")
+
+	// Output:[?1049h[2J[10;10Hexample!
+}
+
+func ExampleWriter_buffered() {
+	buf := bufio.NewWriter(os.Stdout) // buffer the commands going to stdout
+	w := ansi.NewWriter(buf)          // create the writer connected to that buffer
+
+	w.Up(2)
+	w.ClearLineRight()
+	buf.Write([]byte("replacement"))
+	w.Down(2)
+	buf.Flush() // commands and all sent all at once here
+
+	// Output:[2A[Kreplacement[2B
+}
 
 func ExampleEffect() {
 	fmt.Printf("%sThis Will be Blue and Underlined%s", ansi.Effect(ansi.Blue, ansi.Underline), ansi.Effect(ansi.Reset))

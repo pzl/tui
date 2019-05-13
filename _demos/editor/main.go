@@ -41,7 +41,7 @@ const (
 )
 
 type Editor struct {
-	scr         *ansi.OutputBuffer
+	scr         *ansi.Writer
 	mode        EditMode
 	buf         [][]byte
 	curLine     int
@@ -60,7 +60,7 @@ func NewEditor() *Editor {
 	buf[0] = newline()
 
 	return &Editor{
-		scr:     ansi.NewOutputBuffer(),
+		scr:     ansi.NewWriter(nil),
 		mode:    ModeCommand,
 		curLine: 0,
 		curX:    0,
@@ -83,7 +83,6 @@ func (e *Editor) Start() error {
 	e.scr.Screen(ansi.Alt)
 	e.scr.Origin()
 	e.scr.MouseEnable(MOTION)
-	e.scr.Flush()
 
 	for {
 		select {
@@ -102,12 +101,10 @@ func (e *Editor) Redraw() {
 	// clear & print
 	e.scr.ClearAll()
 	e.scr.Origin()
-	e.scr.Flush()
 	fmt.Print(string(s))
 
 	// status bar
 	e.scr.MoveTo(0, e.h-1)
-	e.scr.Flush()
 	fmt.Printf("% 3d, % 3d  lines:%03d%s", e.curLine, e.curX, len(e.buf), strings.Repeat(" ", 40))
 
 	// place cursor
@@ -116,7 +113,6 @@ func (e *Editor) Redraw() {
 	} else {
 		e.scr.MoveTo(e.curX, e.curLine+1)
 	}
-	e.scr.Flush()
 }
 
 func (e *Editor) Cleanup() {
@@ -131,7 +127,6 @@ func (e *Editor) Cleanup() {
 	e.scr.Screen(ansi.Normal)
 	e.scr.CursorBlinker()
 	e.scr.CursorShow()
-	e.scr.Flush()
 }
 
 func (e *Editor) handle(ev tui.Event) {
@@ -140,7 +135,6 @@ func (e *Editor) handle(ev tui.Event) {
 	case tui.ESC:
 		e.mode = ModeCommand
 		e.scr.CursorBlinker()
-		e.scr.Flush()
 		return
 	case tui.CtrlC:
 		close(e.done)
@@ -202,7 +196,6 @@ func (e *Editor) handle(ev tui.Event) {
 		case 'i':
 			e.mode = ModeInsert
 			e.scr.CursorIBlink()
-			e.scr.Flush()
 		case 'h', 'j', 'k', 'l':
 			e.move(ev.Key)
 		}

@@ -11,33 +11,26 @@ import (
 
 const csi = "\x1b["
 
-// ---- @TODO: change outputbuffer idea into more go-ish stream? Something that has Read() or Bytes() or String() or Write() at the end to perform the operation.. ?
-
 /*
-The ansi.OutputBuffer is the primary way to send out the control characters (aside from text effects). Calls are not printed immediately. They are queued up until buffer.Flush() is called.
+The ansi.Writer is the primary use case for the ansi library. Text effects (including colors) can be accessed separately as strings. (see: `ansi.Efect()`)
+
+You must create a writer with ansi.NewWriter() prior to use. A nil argument is accepted, and a new ansi.Writer will be created using os.Stderr as the default output. Commands are issued to the provided io.Writer immediately. In some situations, this is undesired as a user may see the cursor flash around the screen. It may be preferred to buffer the output and write it all at once. You can accomplish that with bufio.
 */
-type OutputBuffer struct {
-	buffer string
-	sink   io.Writer
+type Writer struct {
+	w io.Writer
 }
 
-//Creates an output buffer that prints to Stderr. This will work fine with an application that prints its text to stdout.
-func NewOutputBuffer() *OutputBuffer { return &OutputBuffer{sink: os.Stderr} }
-
-//Creates an output buffer with a user-provided writer. This could be Stdout if you prefer that over Stderr. It could be a file (if you want ansi sequences in them). A stream, network, whatever.
-func NewOutputBufferSink(w io.Writer) *OutputBuffer { return &OutputBuffer{sink: w} }
-
-// Writes all queued calls immediately to the writer (stderr by default)
-func (o *OutputBuffer) Flush() {
-	if len(o.buffer) > 0 {
-		fmt.Fprintf(o.sink, o.buffer)
-		o.buffer = ""
+// Creates an ansi.Writer that will use the provided io.Writer. If nil is provided, Stderr is used. This could be any writer, however: Stdout if you prefer that over Stderr. It could be a file (if you want ansi sequences in them). A stream, network, whatever.
+func NewWriter(w io.Writer) *Writer {
+	if w == nil {
+		w = os.Stderr
 	}
+	return &Writer{w: w}
 }
 
-func (o *OutputBuffer) csi(s string) { o.write(csi + s) }
+func (w *Writer) csi(s string) { w.write(csi + s) }
 
-func (o *OutputBuffer) write(s string) {
+func (w *Writer) write(s string) {
 	// handle non-displayable chars
 	bytes := []byte(s)
 	runes := []rune{}
@@ -53,43 +46,43 @@ func (o *OutputBuffer) write(s string) {
 		}
 		bytes = bytes[sz:]
 	}
-	o.buffer += string(runes)
+	fmt.Fprint(w.w, string(runes))
 }
 
 /* -- actual commands -- */
 
 // Movement
 
-func (o *OutputBuffer) Up(n int)        { o.csi(strconv.Itoa(n) + "A") }
-func (o *OutputBuffer) Down(n int)      { o.csi(strconv.Itoa(n) + "B") }
-func (o *OutputBuffer) Right(n int)     { o.csi(strconv.Itoa(n) + "C") }
-func (o *OutputBuffer) Left(n int)      { o.csi(strconv.Itoa(n) + "D") }
-func (o *OutputBuffer) Origin()         { o.csi("H") }
-func (o *OutputBuffer) MoveTo(x, y int) { o.csi(strconv.Itoa(y) + ";" + strconv.Itoa(x) + "H") } // note these are swapped
-func (o *OutputBuffer) Column(n int)    { o.csi(strconv.Itoa(n) + "G") }
+func (w *Writer) Up(n int)        { w.csi(strconv.Itoa(n) + "A") }
+func (w *Writer) Down(n int)      { w.csi(strconv.Itoa(n) + "B") }
+func (w *Writer) Right(n int)     { w.csi(strconv.Itoa(n) + "C") }
+func (w *Writer) Left(n int)      { w.csi(strconv.Itoa(n) + "D") }
+func (w *Writer) Origin()         { w.csi("H") }
+func (w *Writer) MoveTo(x, y int) { w.csi(strconv.Itoa(y) + ";" + strconv.Itoa(x) + "H") } // note these are swapped
+func (w *Writer) Column(n int)    { w.csi(strconv.Itoa(n) + "G") }
 
 // Clearing
 
-func (o *OutputBuffer) ClearLineRight() { o.csi("K") }
-func (o *OutputBuffer) ClearLineLeft()  { o.csi("1K") }
-func (o *OutputBuffer) ClearLine()      { o.csi("2K") }
-func (o *OutputBuffer) ClearDown()      { o.csi("J") }
-func (o *OutputBuffer) ClearUp()        { o.csi("1J") }
-func (o *OutputBuffer) ClearAll()       { o.csi("2J") }
+func (w *Writer) ClearLineRight() { w.csi("K") }
+func (w *Writer) ClearLineLeft()  { w.csi("1K") }
+func (w *Writer) ClearLine()      { w.csi("2K") }
+func (w *Writer) ClearDown()      { w.csi("J") }
+func (w *Writer) ClearUp()        { w.csi("1J") }
+func (w *Writer) ClearAll()       { w.csi("2J") }
 
 // Cursor
 
-func (o *OutputBuffer) CursorHide()           { o.csi("?25l") }
-func (o *OutputBuffer) CursorShow()           { o.csi("?25h") }
-func (o *OutputBuffer) CursorSave()           { o.csi("s") }  // rarely supported
-func (o *OutputBuffer) CursorRestore()        { o.csi("u") }  // rarely supported
-func (o *OutputBuffer) CursorPosition()       { o.csi("6n") } // you gotta be ready to read here ...
-func (o *OutputBuffer) CursorBlinker()        { o.csi("0 q") }
-func (o *OutputBuffer) CursorSteady()         { o.csi("2 q") }
-func (o *OutputBuffer) CursorUnderlineBlink() { o.csi("3 q") }
-func (o *OutputBuffer) CursorUnderline()      { o.csi("4 q") }
-func (o *OutputBuffer) CursorIBlink()         { o.csi("5 q") }
-func (o *OutputBuffer) CursorI()              { o.csi("6 q") }
+func (w *Writer) CursorHide()           { w.csi("?25l") }
+func (w *Writer) CursorShow()           { w.csi("?25h") }
+func (w *Writer) CursorSave()           { w.csi("s") }  // rarely supported
+func (w *Writer) CursorRestore()        { w.csi("u") }  // rarely supported
+func (w *Writer) CursorPosition()       { w.csi("6n") } // you gotta be ready to read here ...
+func (w *Writer) CursorBlinker()        { w.csi("0 q") }
+func (w *Writer) CursorSteady()         { w.csi("2 q") }
+func (w *Writer) CursorUnderlineBlink() { w.csi("3 q") }
+func (w *Writer) CursorUnderline()      { w.csi("4 q") }
+func (w *Writer) CursorIBlink()         { w.csi("5 q") }
+func (w *Writer) CursorI()              { w.csi("6 q") }
 
 // Screen
 
@@ -101,7 +94,7 @@ const (
 )
 
 //Change terminal to the "Alternate" screen and back. This is usually what full-screen TUIs do
-func (o *OutputBuffer) Screen(m ScreenMode) { o.csi("?1049" + string(m)) }
+func (w *Writer) Screen(m ScreenMode) { w.csi("?1049" + string(m)) }
 
 type textEffect interface{ effect() string }
 
@@ -116,7 +109,7 @@ func Effect(t ...textEffect) string {
 	return csi + strings.Join(s, ";") + "m"
 }
 
-func (o *OutputBuffer) Effect(t ...textEffect) { o.write(Effect(t...)) }
+func (w *Writer) Effect(t ...textEffect) { w.write(Effect(t...)) }
 
 // styles, e.g. bold, underline, blink
 type TextStyle int
@@ -153,7 +146,7 @@ func Style(ts ...TextStyle) string {
 	return csi + strings.Join(s, ";") + "m"
 }
 
-func (o *OutputBuffer) Style(s ...TextStyle) { o.write(Style(s...)) }
+func (w *Writer) Style(s ...TextStyle) { w.write(Style(s...)) }
 
 /* ---------- Mouse -------- */
 
@@ -173,8 +166,8 @@ func getMotion(m MouseMotion) string {
 	return "?100" + strconv.Itoa(int(m))
 }
 
-func (o *OutputBuffer) MouseEnable(m MouseMotion)  { o.csi(getMotion(m) + "h") }
-func (o *OutputBuffer) MouseDisable(m MouseMotion) { o.csi(getMotion(m) + "l") }
+func (w *Writer) MouseEnable(m MouseMotion)  { w.csi(getMotion(m) + "h") }
+func (w *Writer) MouseDisable(m MouseMotion) { w.csi(getMotion(m) + "l") }
 
 // Color provider. Either the basic 16 colors, or 8-bit and 24-bit-truecolor
 type colorable interface{ color() string }
@@ -201,9 +194,9 @@ func (c BasicColor) String() string { return csi + c.effect() + "m" }
 func (c BasicColor) color() string  { return c.String() }           // colorable
 func (c BasicColor) effect() string { return strconv.Itoa(int(c)) } // texteffect
 
-func (o *OutputBuffer) Color(c colorable) { o.write(c.color()) }
+func (w *Writer) Color(c colorable) { w.write(c.color()) }
 
-//func (o *OutputBuffer) ColorBasicBg(b BasicColor) { o.csi(strconv.Itoa(int(b)+10) + "m") }
+//func (w *Writer) ColorBasicBg(b BasicColor) { w.csi(strconv.Itoa(int(b)+10) + "m") }
 
 // Eight bit color. first 16 identical to BasicColor. 216 colors as color cube. 24 greyscale
 // https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
@@ -226,3 +219,35 @@ func (t TrueColor) effect() string {
 	//bg is 48
 	return "38;2;" + strconv.Itoa(int(t)>>16) + ";" + strconv.Itoa(int(t)>>8&0xff) + ";" + strconv.Itoa(int(t)&0xff) + "m"
 }
+
+/* ---- Duplicate things for top-level package ----- */
+
+/*
+func Up(n int)                   { NewWriter(nil).Up(n) }
+func Down(n int)                 { NewWriter(nil).Down(n) }
+func Right(n int)                { NewWriter(nil).Right(n) }
+func Left(n int)                 { NewWriter(nil).Left(n) }
+func Origin()                    { NewWriter(nil).Origin() }
+func MoveTo(x, y int)            { NewWriter(nil).MoveTo(x, y) }
+func Column(n int)               { NewWriter(nil).Column(n) }
+func ClearLineRight()            { NewWriter(nil).ClearLineRight() }
+func ClearLineLeft()             { NewWriter(nil).ClearLineLeft() }
+func ClearLine()                 { NewWriter(nil).ClearLine() }
+func ClearDown()                 { NewWriter(nil).ClearDown() }
+func ClearUp()                   { NewWriter(nil).ClearUp() }
+func ClearAll()                  { NewWriter(nil).ClearAll() }
+func CursorHide()                { NewWriter(nil).CursorHide() }
+func CursorShow()                { NewWriter(nil).CursorShow() }
+func CursorSave()                { NewWriter(nil).CursorSave() }
+func CursorRestore()             { NewWriter(nil).CursorRestore() }
+func CursorPosition()            { NewWriter(nil).CursorPosition() }
+func CursorBlinker()             { NewWriter(nil).CursorBlinker() }
+func CursorSteady()              { NewWriter(nil).CursorSteady() }
+func CursorUnderlineBlink()      { NewWriter(nil).CursorUnderlineBlink() }
+func CursorUnderline()           { NewWriter(nil).CursorUnderline() }
+func CursorIBlink()              { NewWriter(nil).CursorIBlink() }
+func CursorI()                   { NewWriter(nil).CursorI() }
+func Screen(m ScreenMode)        { NewWriter(nil).Screen(m) }
+func MouseEnable(m MouseMotion)  { NewWriter(nil).MouseEnable(m) }
+func MouseDisable(m MouseMotion) { NewWriter(nil).MouseDisable(m) }
+*/
