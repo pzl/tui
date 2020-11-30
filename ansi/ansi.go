@@ -220,34 +220,42 @@ func (t TrueColor) effect() string {
 	return "38;2;" + strconv.Itoa(int(t)>>16) + ";" + strconv.Itoa(int(t)>>8&0xff) + ";" + strconv.Itoa(int(t)&0xff) + "m"
 }
 
-/* ---- Duplicate things for top-level package ----- */
+// Moving the Cursor around the terminal
+type CursorCmd string
 
-/*
-func Up(n int)                   { NewWriter(nil).Up(n) }
-func Down(n int)                 { NewWriter(nil).Down(n) }
-func Right(n int)                { NewWriter(nil).Right(n) }
-func Left(n int)                 { NewWriter(nil).Left(n) }
-func Origin()                    { NewWriter(nil).Origin() }
-func MoveTo(x, y int)            { NewWriter(nil).MoveTo(x, y) }
-func Column(n int)               { NewWriter(nil).Column(n) }
-func ClearLineRight()            { NewWriter(nil).ClearLineRight() }
-func ClearLineLeft()             { NewWriter(nil).ClearLineLeft() }
-func ClearLine()                 { NewWriter(nil).ClearLine() }
-func ClearDown()                 { NewWriter(nil).ClearDown() }
-func ClearUp()                   { NewWriter(nil).ClearUp() }
-func ClearAll()                  { NewWriter(nil).ClearAll() }
-func CursorHide()                { NewWriter(nil).CursorHide() }
-func CursorShow()                { NewWriter(nil).CursorShow() }
-func CursorSave()                { NewWriter(nil).CursorSave() }
-func CursorRestore()             { NewWriter(nil).CursorRestore() }
-func CursorPosition()            { NewWriter(nil).CursorPosition() }
-func CursorBlinker()             { NewWriter(nil).CursorBlinker() }
-func CursorSteady()              { NewWriter(nil).CursorSteady() }
-func CursorUnderlineBlink()      { NewWriter(nil).CursorUnderlineBlink() }
-func CursorUnderline()           { NewWriter(nil).CursorUnderline() }
-func CursorIBlink()              { NewWriter(nil).CursorIBlink() }
-func CursorI()                   { NewWriter(nil).CursorI() }
-func Screen(m ScreenMode)        { NewWriter(nil).Screen(m) }
-func MouseEnable(m MouseMotion)  { NewWriter(nil).MouseEnable(m) }
-func MouseDisable(m MouseMotion) { NewWriter(nil).MouseDisable(m) }
-*/
+const (
+	Up                   CursorCmd = "A"
+	Down                 CursorCmd = "B"
+	Right                CursorCmd = "C"
+	Left                 CursorCmd = "D"
+	Origin               CursorCmd = "H"
+	Column0              CursorCmd = "G"
+	ClearLineRight       CursorCmd = "K"
+	ClearLineLeft        CursorCmd = "1K"
+	ClearLine            CursorCmd = "2K"
+	ClearDown            CursorCmd = "J"
+	ClearUp              CursorCmd = "1J"
+	ClearAll             CursorCmd = "2J"
+	CursorHide           CursorCmd = "?25l"
+	CursorShow           CursorCmd = "?25h"
+	CursorSave           CursorCmd = "s"  // rarely supported
+	CursorRestore        CursorCmd = "u"  // rarely supported
+	CursorPosition       CursorCmd = "6n" // you gotta be ready to read here ...
+	CursorBlinker        CursorCmd = "0 q"
+	CursorSteady         CursorCmd = "2 q"
+	CursorUnderlineBlink CursorCmd = "3 q"
+	CursorUnderline      CursorCmd = "4 q"
+	CursorIBlink         CursorCmd = "5 q"
+	CursorI              CursorCmd = "6 q"
+	ScreenModeAlt        CursorCmd = "?1049h"
+	ScreenModenNormal    CursorCmd = "?1049l"
+)
+
+// support for using CursorCmd's directly as a string (e.g. fmt.Printf and %s)
+func (c CursorCmd) String() string { return csi + c.cmd() }
+func (c CursorCmd) cmd() string    { return string(c) }
+
+//func MoveTo(x, y int)            { NewWriter(nil).MoveTo(x, y) }
+//func Column(n int)               { NewWriter(nil).Column(n) }
+//func MouseEnable(m MouseMotion)  { NewWriter(nil).MouseEnable(m) }
+//func MouseDisable(m MouseMotion) { NewWriter(nil).MouseDisable(m) }

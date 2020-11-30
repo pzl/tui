@@ -240,3 +240,45 @@ func TestBufColor24Bit(t *testing.T) {
 	w.Color(T(38, 50, 127))
 	assert.Equal(t, "\x1b[38;2;38;50;127m", out.String())
 }
+
+func TestCursorCmds(t *testing.T) {
+	assert.Equal(t, "\x1b[A", Up.String())
+
+	tests := map[string]struct {
+		cmd CursorCmd
+		val string
+	}{
+		"Up":                   {cmd: Up, val: "A"},
+		"Down":                 {cmd: Down, val: "B"},
+		"Right":                {cmd: Right, val: "C"},
+		"Left":                 {cmd: Left, val: "D"},
+		"Origin":               {cmd: Origin, val: "H"},
+		"Column0":              {cmd: Column0, val: "G"},
+		"ClearLineRight":       {cmd: ClearLineRight, val: "K"},
+		"ClearLineLeft":        {cmd: ClearLineLeft, val: "1K"},
+		"ClearLine":            {cmd: ClearLine, val: "2K"},
+		"ClearDown":            {cmd: ClearDown, val: "J"},
+		"ClearUp":              {cmd: ClearUp, val: "1J"},
+		"ClearAll":             {cmd: ClearAll, val: "2J"},
+		"CursorHide":           {cmd: CursorHide, val: "?25l"},
+		"CursorShow":           {cmd: CursorShow, val: "?25h"},
+		"CursorSave":           {cmd: CursorSave, val: "s"},
+		"CursorRestore":        {cmd: CursorRestore, val: "u"},
+		"CursorPosition":       {cmd: CursorPosition, val: "6n"},
+		"CursorBlinker":        {cmd: CursorBlinker, val: "0 q"},
+		"CursorSteady":         {cmd: CursorSteady, val: "2 q"},
+		"CursorUnderlineBlink": {cmd: CursorUnderlineBlink, val: "3 q"},
+		"CursorUnderline":      {cmd: CursorUnderline, val: "4 q"},
+		"CursorIBlink":         {cmd: CursorIBlink, val: "5 q"},
+		"CursorI":              {cmd: CursorI, val: "6 q"},
+		"ScreenModeAlt":        {cmd: ScreenModeAlt, val: "?1049h"},
+		"ScreenModenNormal":    {cmd: ScreenModenNormal, val: "?1049l"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, "\x1b["+tc.val, tc.cmd.String())
+		})
+	}
+
+}
