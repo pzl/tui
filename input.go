@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -399,11 +398,11 @@ func fillBuf(fd int, buf []byte) []byte {
 
 func getchar(fd int, nonblock bool) (int, bool) {
 	b := make([]byte, 1)
-	err := syscall.SetNonblock(fd, nonblock)
+	err := setNonBlock(fd, nonblock)
 	if err != nil {
 		return 0, false
 	}
-	if n, err := syscall.Read(fd, b); err != nil || n < 1 {
+	if n, err := sysRead(fd, b); err != nil || n < 1 {
 		return 0, false
 	}
 	return int(b[0]), true

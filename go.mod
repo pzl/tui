@@ -7,4 +7,5 @@ require (
 	github.com/mattn/go-runewidth v0.0.4
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/crypto v0.0.0-20190426145343-a29dc8fdc734
+	golang.org/x/sys v0.4.0 // indirect
 )

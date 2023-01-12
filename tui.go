@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"syscall"
 
 	"github.com/mattn/go-isatty"
 	"github.com/mattn/go-runewidth"
@@ -59,7 +58,7 @@ func CursorPosition(fd int) (x int, y int, err error) {
 		err = terminal.Restore(fd, state)
 	}()
 
-	err = syscall.SetNonblock(fd, false)
+	err = setNonBlock(fd, false)
 	if err != nil {
 		return 0, 0, fmt.Errorf("error setting terminal as blocking: %v", err)
 	}
@@ -76,7 +75,7 @@ func CursorPosition(fd int) (x int, y int, err error) {
 
 	// read response from stdin
 	b := make([]byte, 13)
-	_, err = syscall.Read(fd, b)
+	_, err = sysRead(fd, b)
 	if err != nil {
 		return 0, 0, fmt.Errorf("error reading input: %v", err)
 	}
